@@ -72,10 +72,12 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_B0C8AFD45B6B490384538311A25FC228 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_136D6EA605F74583BA58A5DDBF710325 }}
 
+          
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
           app-name: 'kicc-ml-models'
           slot-name: 'Production'
-          
+          package: .
+          startup-command: 'gunicorn app:app'
