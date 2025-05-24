@@ -6,20 +6,12 @@ import pyodbc
 app = Flask(__name__)
 model = joblib.load('random_forest_model3.pkl')
 
-
+# Configurações do banco de dados
 server = 'kicc-prediction.database.windows.net'
 database = 'predictions'
 username = 'jpoliveira'
-password = 'r7M!2#n4'  
+password = 'r7M!2#n4'
 driver = '{ODBC Driver 17 for SQL Server}'
-
-try:
-    conn = pyodbc.connect(
-        f'DRIVER={driver};SERVER={server};PORT=1433;DATABASE={database};UID={username};PWD={password}'
-    )
-    cursor = conn.cursor()
-except Exception as e:
-    print(f"Erro de conexão com o banco de dados: {e}")
 
 @app.route('/')
 def home():
@@ -28,7 +20,13 @@ def home():
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
-        
+        # Conecta ao banco de dados
+        conn = pyodbc.connect(
+            f'DRIVER={driver};SERVER={server};PORT=1433;DATABASE={database};UID={username};PWD={password}'
+        )
+        cursor = conn.cursor()
+
+        # Coleta dados do formulário
         age = int(request.form['Age'])
         resting_bp = int(request.form['RestingBP'])
         cholesterol = int(request.form['Cholesterol'])
@@ -42,7 +40,7 @@ def predict():
         exercise_angina = request.form['ExerciseAngina']
         slope = request.form['ST_Slope']
 
-        # One-hot encoding 
+        # One-hot encoding
         chest_pain_ata = 1 if chest_pain == 'ATA' else 0
         chest_pain_nap = 1 if chest_pain == 'NAP' else 0
         chest_pain_ta = 1 if chest_pain == 'TA' else 0
@@ -55,7 +53,7 @@ def predict():
         slope_flat = 1 if slope == 'Flat' else 0
         slope_up = 1 if slope == 'Up' else 0
 
-        
+        # Vetor de características
         features = np.array([[age, resting_bp, cholesterol, fasting_bs, max_hr, oldpeak,
                               sex_m, chest_pain_ata, chest_pain_nap, chest_pain_ta,
                               ecg_normal, ecg_st, angina_y, slope_flat, slope_up]])
@@ -63,9 +61,9 @@ def predict():
         prediction = model.predict(features)[0]
         result = 'High Risk of Heart Disease' if prediction == 1 else 'Low Risk of Heart Disease'
 
-        
+        # Armazena a previsão no banco de dados
         cursor.execute("""
-            INSERT INTO predictions_log 
+            INSERT INTO predictions_log
             (age, resting_bp, cholesterol, fasting_bs, max_hr, oldpeak,
              sex_m, chest_pain_type, ecg_type, exercise_angina, st_slope, result)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
